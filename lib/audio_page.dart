@@ -12,11 +12,15 @@ class _AudioPageState extends State<AudioPage> with TickerProviderStateMixin {
   final AudioPlayer _audioPlayer = AudioPlayer();
   late final AnimationController _animationController;
   late final Animation<double> _rotationAnimation;
+  late final AnimationController _warningController;
+  late final Animation<double> _warningRotation;
+  late final Animation<double> _warningOpacity;
 
   final List<double> _playSpeeds = [0.25, 0.5, 1.0, 2.0];
   int _playSpeedIndex = 2; // Index of initial playback speed (1.0)
   double _playSpeed = 1.0;
   bool isPlaying = false;
+  bool _warningActive = false;
 
   @override
   void initState() {
@@ -27,6 +31,15 @@ class _AudioPageState extends State<AudioPage> with TickerProviderStateMixin {
       duration: const Duration(seconds: 1),
     );
     _rotationAnimation = Tween<double>(begin: 0, end: 1).animate(_animationController);
+
+    _warningController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    );
+    _warningRotation = Tween<double>(begin: 0, end: 1).animate(_warningController);
+    _warningOpacity = Tween<double>(begin: 1.0, end: 0.3).animate(
+      CurvedAnimation(parent: _warningController, curve: Curves.easeInOut),
+    );
   }
 
   void _playAudio() async {
@@ -63,9 +76,22 @@ class _AudioPageState extends State<AudioPage> with TickerProviderStateMixin {
     });
   }
 
+  void _toggleWarning() {
+    setState(() {
+      _warningActive = !_warningActive;
+      if (_warningActive) {
+        _warningController.repeat(reverse: true);
+      } else {
+        _warningController.stop();
+        _warningController.reset();
+      }
+    });
+  }
+
   @override
   void dispose() {
     _animationController.dispose();
+    _warningController.dispose();
     _audioPlayer.dispose();
     super.dispose();
   }
@@ -127,6 +153,36 @@ class _AudioPageState extends State<AudioPage> with TickerProviderStateMixin {
                 style: const TextStyle(color: Colors.blue, fontSize: 20),
               ),
             ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: _toggleWarning,
+              child: Text(_warningActive ? 'Stop Warning' : 'Start Warning'),
+            ),
+            const SizedBox(height: 20),
+            if (_warningActive)
+              FadeTransition(
+                opacity: _warningOpacity,
+                child: RotationTransition(
+                  turns: _warningRotation,
+                  child: Container(
+                    width: 150,
+                    height: 150,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.red,
+                    ),
+                    alignment: Alignment.center,
+                    child: const Text(
+                      'Warning!',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 24,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
